@@ -1,4 +1,5 @@
-<p-table [value]="tasks()" [tableStyle]="{ 'min-width': '50rem' }">
+@let items = tasks(); @if (items !== undefined && items.length > 0) {
+<p-table [value]="items" [tableStyle]="{ 'min-width': '50rem' }">
   <ng-template #header>
     <tr>
       <th>Code</th>
@@ -16,3 +17,4 @@
     </tr>
   </ng-template>
 </p-table>
+} @else { No tasks }

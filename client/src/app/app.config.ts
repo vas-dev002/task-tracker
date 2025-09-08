@@ -4,6 +4,8 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { ENVIRONMENT } from 'vas-shared';
 import { environment } from '../environments/environment.prod';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { AppInterceptorService } from './services/app-interceptor.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -13,6 +15,12 @@ export const appConfig: ApplicationConfig = {
     {
       provide: ENVIRONMENT,
       useValue: environment,
+    },
+    provideHttpClient(withInterceptorsFromDi()),
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: AppInterceptorService,
+      multi: true,
     },
   ],
 };

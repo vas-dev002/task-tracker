@@ -1,7 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { TableModule } from 'primeng/table';
-import { Task } from 'vas-shared/common';
 import { TasksEndpoint } from '../../endpoints/tasks.endponit';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { Task } from 'vas-shared/common';
 
 @Component({
   selector: 'app-grid-view',
@@ -13,5 +14,5 @@ import { TasksEndpoint } from '../../endpoints/tasks.endponit';
 })
 export class GridView {
   protected tasksEndpoint = inject(TasksEndpoint);
-  public tasks = signal<Task[]>([]);
+  public tasks = toSignal<Task[]>(this.tasksEndpoint.getTasks$());
 }
