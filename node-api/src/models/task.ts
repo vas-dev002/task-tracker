@@ -6,6 +6,6 @@ export interface Task {
   completed: boolean;
 }
 
-export const TaskProtectedFields: Array<keyof Task> = ['id'];
+export const TaskProtectedFields: (keyof Task)[] = ['id'];
 
-export let tasks: Task[] = [];
+export const TasksStorage: Task[] = [];
