@@ -6,10 +6,11 @@ import { Task } from 'vas-shared/common';
 import { ButtonModule } from 'primeng/button';
 import { AddTaskDialog } from '../add-task-dialog/add-task-dialog';
 import { Subject, switchMap } from 'rxjs';
+import { ToolbarModule } from 'primeng/toolbar';
 
 @Component({
   selector: 'app-grid-view',
-  imports: [TableModule, ButtonModule, AddTaskDialog],
+  imports: [TableModule, ButtonModule, AddTaskDialog, ToolbarModule],
   providers: [TasksEndpoint],
   templateUrl: './grid-view.html',
   styleUrl: './grid-view.scss',

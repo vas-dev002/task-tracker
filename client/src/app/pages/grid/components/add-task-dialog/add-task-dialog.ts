@@ -2,11 +2,13 @@ import { Component, EventEmitter, inject, Output } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
+import { FluidModule } from 'primeng/fluid';
+import { InputTextModule } from 'primeng/inputtext';
 
 @Component({
   selector: 'app-add-task-dialog',
   standalone: true,
-  imports: [DialogModule, ReactiveFormsModule, ButtonModule],
+  imports: [DialogModule, ReactiveFormsModule, ButtonModule, FluidModule, InputTextModule],
   templateUrl: './add-task-dialog.html',
 })
 export class AddTaskDialog {
