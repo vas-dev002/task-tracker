@@ -1,6 +1,6 @@
 <p-button label="Add new task" (click)="addTask()" />
 @if (taskDialogVisible()){
-<app-add-task-dialog (submitted)="handleResult($event)" (cancelled)="handleCancel()"> </app-add-task-dialog>}; @let items = tasks(); @if (items !==
+<app-add-task-dialog (submitted)="handleResult($event)" (cancelled)="handleCancel()"> </app-add-task-dialog>} @let items = tasks(); @if (items !==
 undefined && items.length > 0) {
 <p-table [value]="items" [tableStyle]="{ 'min-width': '50rem' }">
   <ng-template #header>
