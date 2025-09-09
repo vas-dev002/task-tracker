@@ -6,9 +6,9 @@
   <p-table [value]="items" [tableStyle]="{ 'min-width': '50rem' }">
     <ng-template #header>
       <tr>
-        <th>Id</th>
-        <th>Title</th>
-        <th>Completed</th>
+        <th>ID Задачи</th>
+        <th>Название</th>
+        <th>Статус</th>
         <th></th>
       </tr>
     </ng-template>
@@ -16,7 +16,14 @@
       <tr>
         <td>{{ task.id }}</td>
         <td>{{ task.title }}</td>
-        <td><p-checkbox [(ngModel)]="task.completed" binary="true" inputId="taskCompleted" readonly></p-checkbox></td>
+        <td>
+          <p-checkbox
+            [(ngModel)]="task.completed"
+            binary="true"
+            inputId="taskCompleted"
+            [ngModel]="task.completed"
+            (onChange)="taskStatusChange($event, task)"></p-checkbox>
+        </td>
         <td>
           <p-button icon="pi pi-trash" (click)="deleteTask(task)" severity="danger" label="Remove" />
         </td>

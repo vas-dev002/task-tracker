@@ -4,12 +4,12 @@ import { randomUUID } from 'crypto';
 
 export const createTask = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { title, completed } = req.body;
-    if (!title || completed === undefined) {
+    const { title } = req.body;
+    if (!title) {
       res.status(400).json({ message: 'Invalid task data' });
       return;
     }
-    const newTitle: Task = { id: randomUUID(), title, completed };
+    const newTitle: Task = { id: randomUUID(), title, completed: false };
     TasksStorage.push(newTitle);
     res.status(201).json(newTitle);
   } catch (error) {

@@ -20,7 +20,6 @@ export class AddTaskDialog {
   protected fb = inject(FormBuilder);
   public form = this.fb.nonNullable.group({
     title: ['', Validators.required],
-    completed: [false, Validators.nullValidator],
   });
 
   public submit() {

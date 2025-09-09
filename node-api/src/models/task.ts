@@ -10,23 +10,18 @@ export const TaskProtectedFields: (keyof Task)[] = ['id'];
 
 export const TasksStorage: Task[] = [
   {
-    id: '00000000-0000-0000-0000-000000000000',
+    id: 'eb9955a2-c6cf-40df-831a-2d84a7033e6a',
     title: 'Initial Task',
     completed: false,
   },
   {
-    id: '11111111-1111-1111-1111-111111111111',
+    id: 'cd37afda-1006-41c0-a708-bc2939c9400e',
     title: 'Second Task',
     completed: true,
   },
   {
-    id: '22222222-2222-2222-2222-222222222222',
+    id: '888f6e5e-601a-4e59-b57c-565997cba5d6',
     title: 'Third Task',
     completed: false,
-  },
-  {
-    id: '33333333-3333-3333-3333-333333333333',
-    title: 'Fourth Task',
-    completed: true,
   },
 ];

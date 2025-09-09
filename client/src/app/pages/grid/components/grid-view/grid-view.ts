@@ -7,7 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { AddTaskDialog } from '../add-task-dialog/add-task-dialog';
 import { Subject, switchMap } from 'rxjs';
 import { ToolbarModule } from 'primeng/toolbar';
-import { CheckboxModule } from 'primeng/checkbox';
+import { CheckboxChangeEvent, CheckboxModule } from 'primeng/checkbox';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -54,5 +54,12 @@ export class GridView implements OnInit {
       .subscribe(() => {
         this.getTasks$.next();
       });
+  }
+
+  taskStatusChange(event: CheckboxChangeEvent, task: Task) {
+    this.tasksEndpoint
+      .updateTask$({ id: task.id, task: { completed: event.checked } })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
   }
 }
