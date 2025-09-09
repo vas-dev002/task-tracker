@@ -1,4 +1,4 @@
-<p-toolbar class="mb-2"><p-button class="pb-2" label="Add new task" (click)="addTask()" /></p-toolbar>
+<p-toolbar class="mb-2"><p-button icon="pi pi-plus" class="pb-2" label="Add new task" (click)="addTask()" /></p-toolbar>
 @if (taskDialogVisible()){
 <app-add-task-dialog (submitted)="handleResult($event)" (cancelled)="handleCancel()"> </app-add-task-dialog>}
 <ng-container>
@@ -9,6 +9,7 @@
         <th>Id</th>
         <th>Title</th>
         <th>Completed</th>
+        <th></th>
       </tr>
     </ng-template>
     <ng-template #body let-task>
@@ -16,6 +17,9 @@
         <td>{{ task.id }}</td>
         <td>{{ task.title }}</td>
         <td>{{ task.completed }}</td>
+        <td>
+          <p-button icon="pi pi-trash" (click)="deleteTask(task)" severity="danger" label="Remove" />
+        </td>
       </tr>
     </ng-template>
   </p-table>

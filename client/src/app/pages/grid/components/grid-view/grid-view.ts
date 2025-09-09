@@ -44,4 +44,13 @@ export class GridView implements OnInit {
   public handleCancel() {
     this.taskDialogVisible.set(false);
   }
+
+  public deleteTask(task: Task) {
+    this.tasksEndpoint
+      .deleteTask$(task.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.getTasks$.next();
+      });
+  }
 }
