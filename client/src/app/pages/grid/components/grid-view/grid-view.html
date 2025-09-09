@@ -16,7 +16,7 @@
       <tr>
         <td>{{ task.id }}</td>
         <td>{{ task.title }}</td>
-        <td>{{ task.completed }}</td>
+        <td><p-checkbox [(ngModel)]="task.completed" binary="true" inputId="taskCompleted" readonly></p-checkbox></td>
         <td>
           <p-button icon="pi pi-trash" (click)="deleteTask(task)" severity="danger" label="Remove" />
         </td>

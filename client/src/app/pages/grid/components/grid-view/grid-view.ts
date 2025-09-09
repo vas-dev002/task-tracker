@@ -7,10 +7,12 @@ import { ButtonModule } from 'primeng/button';
 import { AddTaskDialog } from '../add-task-dialog/add-task-dialog';
 import { Subject, switchMap } from 'rxjs';
 import { ToolbarModule } from 'primeng/toolbar';
+import { CheckboxModule } from 'primeng/checkbox';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-grid-view',
-  imports: [TableModule, ButtonModule, AddTaskDialog, ToolbarModule],
+  imports: [TableModule, ButtonModule, AddTaskDialog, ToolbarModule, CheckboxModule, FormsModule],
   providers: [TasksEndpoint],
   templateUrl: './grid-view.html',
   styleUrl: './grid-view.scss',
