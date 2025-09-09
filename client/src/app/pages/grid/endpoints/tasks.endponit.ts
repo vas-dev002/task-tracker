@@ -8,10 +8,10 @@ export class TasksEndpoint {
   protected http = inject(HttpClient);
 
   public getTasks$() {
-    return this.http.get<Task[]>(`tasks`, { mode: 'no-cors' });
+    return this.http.get<Task[]>(`tasks`);
   }
 
-  public createTask$(task: Task) {
+  public createTask$(task: Partial<Task>) {
     return this.http.post<Task>(`tasks`, task);
   }
 

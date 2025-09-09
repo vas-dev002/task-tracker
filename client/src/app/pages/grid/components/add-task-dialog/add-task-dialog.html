@@ -1,0 +1,15 @@
+<p-dialog header="Add new task" [visible]="visible" [modal]="true" [closable]="false" [style]="{ width: '400px' }">
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div class="p-fluid">
+      <div class="p-field">
+        <label for="taskTitle">Title</label>
+        <input id="taskTitle" type="text" pInputText formControlName="title" />
+      </div>
+    </div>
+
+    <p-footer>
+      <p-button pButton label="Cancel" class="p-button-text" (click)="cancel()" />
+      <p-button pButton type="submit" label="Save" [disabled]="form.invalid" />
+    </p-footer>
+  </form>
+</p-dialog>
