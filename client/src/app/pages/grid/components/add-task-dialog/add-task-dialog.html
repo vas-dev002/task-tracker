@@ -1,9 +1,13 @@
 <p-dialog header="Add new task" [visible]="visible" [modal]="true" [closable]="false" [style]="{ width: '400px' }">
   <form [formGroup]="form" (ngSubmit)="submit()">
     <p-fluid>
-      <div class="p-field">
-        <label for="taskTitle">Task title:</label>
-        <input id="taskTitle" type="text" pInputText formControlName="title" />
+      <div class="mb-3">
+        <label for="taskTitle" class="form-label">Task title:</label>
+        <input id="taskTitle" type="text" pInputText formControlName="title" class="form-control" />
+      </div>
+      <div>
+        <label for="taskCompleted" class="form-check-label me-2">Completed</label>
+        <p-checkbox formControlName="completed" binary="true" inputId="taskCompleted"></p-checkbox>
       </div>
     </p-fluid>
     <div class="hstack gap-2 justify-content-end mt-4">
