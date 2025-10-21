@@ -16,9 +16,15 @@ const customJestConfig = {
   collectCoverageFrom: [
     'app/**/*.{ts,tsx}',
     'components/**/*.{ts,tsx}',
+    'packages/**/*.{ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
+    '!**/dist/**',
   ],
+  moduleNameMapping: {
+    '^@/(.*)$': '<rootDir>/$1',
+    '^@shared/(.*)$': '<rootDir>/packages/shared-react/src/$1'
+  }
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
