@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 3001",
-    "build": "next build --turbopack",
+    "dev:shared": "cd packages/shared-react && npm run dev",
+    "build": "npm run build:shared && next build --turbopack",
+    "build:shared": "cd packages/shared-react && npm run build",
     "start": "next start -p 3001",
     "lint": "eslint",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "format": "prettier --write .",
-    "build:shared": "cd packages/shared-react && npm run build"
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@ant-design/nextjs-registry": "^1.1.0",

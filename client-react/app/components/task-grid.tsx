@@ -83,9 +83,7 @@ export const TaskGrid: React.FC = () => {
       dataIndex: 'title',
       key: 'title',
       render: (title: string, record: Task) => (
-        <span style={{ textDecoration: record.completed ? 'line-through' : 'none' }}>
-          {title}
-        </span>
+        <span style={{ textDecoration: record.completed ? 'line-through' : 'none' }}>{title}</span>
       ),
     },
     {
