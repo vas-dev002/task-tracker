@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import { Task } from '@shared/models/task';
 import { useTasksApi } from '../hooks/use-tasks-api';
 import { AddTaskDialog } from './add-task-dialog';
+import { Table, Button, Checkbox, Space, Popconfirm, Card, message } from 'antd';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 
 export const TaskGrid: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -28,118 +31,112 @@ export const TaskGrid: React.FC = () => {
       {
         onSuccess: () => {
           setIsDialogOpen(false);
+          message.success('Task added successfully');
+        },
+        onError: () => {
+          message.error('Failed to add task');
         },
       }
     );
   };
 
   const handleTaskToggle = (task: Task) => {
-    updateTaskMutation.mutate({
-      id: task.id,
-      task: { completed: !task.completed },
-    });
+    updateTaskMutation.mutate(
+      {
+        id: task.id,
+        task: { completed: !task.completed },
+      },
+      {
+        onSuccess: () => {
+          message.success(task.completed ? 'Task marked as incomplete' : 'Task completed');
+        },
+        onError: () => {
+          message.error('Failed to update task');
+        },
+      }
+    );
   };
 
   const handleTaskDelete = (taskId: string) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      deleteTaskMutation.mutate(taskId);
-    }
+    deleteTaskMutation.mutate(taskId, {
+      onSuccess: () => {
+        message.success('Task deleted successfully');
+      },
+      onError: () => {
+        message.error('Failed to delete task');
+      },
+    });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-600">Loading tasks...</div>
-      </div>
-    );
-  }
+  const columns: ColumnsType<Task> = [
+    {
+      title: 'Status',
+      dataIndex: 'completed',
+      key: 'completed',
+      width: 100,
+      render: (completed: boolean, record: Task) => (
+        <Checkbox checked={completed} onChange={() => handleTaskToggle(record)} />
+      ),
+    },
+    {
+      title: 'Title',
+      dataIndex: 'title',
+      key: 'title',
+      render: (title: string, record: Task) => (
+        <span style={{ textDecoration: record.completed ? 'line-through' : 'none' }}>
+          {title}
+        </span>
+      ),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 100,
+      render: (_, record: Task) => (
+        <Space>
+          <Popconfirm
+            title="Delete Task"
+            description="Are you sure you want to delete this task?"
+            onConfirm={() => handleTaskDelete(record.id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button type="text" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
   if (error) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-red-600">Error loading tasks</div>
-      </div>
-    );
+    message.error('Error loading tasks');
   }
 
   return (
     <div className="container mx-auto p-6">
-      <div className="bg-white rounded-lg shadow-md">
-        {/* Toolbar */}
-        <div className="border-b border-gray-200 p-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-800">Task Manager</h2>
-            <button
-              onClick={handleAddTask}
-              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors flex items-center gap-2"
-            >
-              <span className="text-lg">+</span>
-              Add Task
-            </button>
-          </div>
-        </div>
-
-        {/* Task Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Title
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {tasks.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
-                    No tasks found. Add your first task!
-                  </td>
-                </tr>
-              ) : (
-                tasks.map((task) => (
-                  <tr key={task.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={task.completed}
-                        onChange={() => handleTaskToggle(task)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div
-                        className={`text-sm ${
-                          task.completed
-                            ? 'text-gray-500 line-through'
-                            : 'text-gray-900 font-medium'
-                        }`}
-                      >
-                        {task.title}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button
-                        onClick={() => handleTaskDelete(task.id)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
-                        title="Delete task"
-                      >
-                        🗑️
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Card
+        title="Task Manager"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddTask}>
+            Add Task
+          </Button>
+        }
+      >
+        <Table
+          columns={columns}
+          dataSource={tasks}
+          rowKey="id"
+          loading={isLoading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => `Total ${total} tasks`,
+          }}
+          locale={{
+            emptyText: 'No tasks found. Add your first task!',
+          }}
+        />
+      </Card>
 
       <AddTaskDialog
         isOpen={isDialogOpen}

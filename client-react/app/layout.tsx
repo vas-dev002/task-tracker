@@ -4,6 +4,7 @@ import './globals.css';
 import { QueryProvider } from './providers/query-provider';
 import { EnvironmentProvider } from '@shared/providers/environment-provider';
 import { environment } from './config/environment';
+import { AntdRegistry } from '@ant-design/nextjs-registry';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,7 +18,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={inter.className}>
         <EnvironmentProvider environment={environment}>
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <AntdRegistry>{children}</AntdRegistry>
+          </QueryProvider>
         </EnvironmentProvider>
       </body>
     </html>
