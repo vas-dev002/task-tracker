@@ -19,6 +19,8 @@ class SmokeHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"ready": True})
         elif self.path == "/live":
             self._send_json(200, {"alive": True})
+        elif self.path == "/info":
+            self._send_json(200, {"name": "task-tracker", "version": "0.1.0"})
         else:
             self._send_json(404, {"error": "not found"})
 

@@ -1,0 +1,36 @@
+version: 1
+scenario: "GET /info reports the service name and version while /health stays intact"
+
+steps:
+  - id: info
+    name: "GET /info returns 200 with JSON {\"name\": \"task-tracker\", \"version\": \"0.1.0\"}"
+    http:
+      method: GET
+      path: /info
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"version"'
+      json:
+        has: [name, version]
+        equals: { name: "task-tracker", version: "0.1.0" }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "A path that merely starts with /info is still 404"
+    http:
+      method: GET
+      path: /info/extra
+    expect:
+      status: 404
