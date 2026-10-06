@@ -1,0 +1,80 @@
+# Slim acceptance CI for the software factory — TEMPLATE.
+#
+# Copy this into the TARGET repo (the one the factory edits) as
+#   .github/workflows/ci.yml
+# A human adds it ONCE. It is deliberately generic and fixed: it just invokes the
+# acceptance runner the factory VENDORS into the repo (.factory/runner) against
+# whatever scenarios exist (.factory/scenarios). New tests = new scenario files,
+# auto-discovered — this workflow never needs to change, so the factory token
+# needs no `workflow` scope and the agents only ever write .factory/ files.
+#
+# No token is needed: the runner is vendored into the repo, not fetched from the
+# private factory. The factory's tester reads this job's conclusion (name below)
+# and the uploaded acceptance-artifacts. Requires Docker (available on
+# ubuntu-latest) — the runner brings the app up in a container.
+#
+# Fresh repo: before the first factory PR there's no vendored runner or scenarios
+# yet, so this job SKIPS cleanly and passes ("nothing to check yet"). It runs for
+# real once the factory has populated .factory/.
+
+name: acceptance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  acceptance:
+    name: acceptance        # the factory's tester matches checks by this name
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pass cleanly until the factory has populated .factory/ (fresh repo, or a
+      # branch before the first factory PR). "Nothing to check yet" is a pass.
+      - name: Check for the acceptance contract
+        id: contract
+        run: |
+          if [ -f .factory/runner/requirements.txt ] && [ -f .factory/runtime.yml ] \
+             && ls .factory/scenarios/*.yml .factory/scenarios/*.yaml >/dev/null 2>&1; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No .factory contract yet (runner/runtime/scenarios) — skipping acceptance."
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.contract.outputs.ready == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Install the vendored runner
+        if: steps.contract.outputs.ready == 'true'
+        run: pip install -r .factory/runner/requirements.txt
+
+      # Only browser scenarios need Chromium; skip the download otherwise.
+      - name: Install browser (only when a scenario uses it)
+        if: steps.contract.outputs.ready == 'true'
+        run: |
+          if grep -rqsE --include='*.yml' --include='*.yaml' '^\s*-?\s*browser:' .factory/scenarios; then
+            python -m playwright install --with-deps chromium
+          fi
+
+      - name: Run acceptance scenarios
+        if: steps.contract.outputs.ready == 'true'
+        env:
+          PYTHONPATH: .factory/runner
+        run: |
+          python -m acceptance.run \
+            --manifest .factory/runtime.yml \
+            --scenarios .factory/scenarios \
+            --artifacts ./.factory-artifacts
+
+      - name: Upload acceptance artifacts
+        if: always() && steps.contract.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-artifacts
+          path: ./.factory-artifacts
+          if-no-files-found: ignore
