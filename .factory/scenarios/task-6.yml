@@ -1,0 +1,34 @@
+version: 1
+scenario: "GET /status reports service status while /health stays intact"
+
+steps:
+  - id: status
+    name: "GET /status returns 200 with JSON {\"status\": \"ok\"}"
+    http:
+      method: GET
+      path: /status
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"status"'
+      json:
+        has: [status]
+        equals: { status: "ok" }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      json:
+        equals: { status: "ok" }
+
+  - name: "A path that merely starts with /status is still 404"
+    http:
+      method: GET
+      path: /status/extra
+    expect:
+      status: 404

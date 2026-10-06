@@ -9,6 +9,8 @@ class SmokeHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health":
             self._send_json(200, {"status": "ok"})
+        elif self.path == "/status":
+            self._send_json(200, {"status": "ok"})
         elif self.path == "/ping":
             self._send_json(200, {"ping": "pong"})
         elif self.path == "/hello":
