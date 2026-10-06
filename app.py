@@ -4,11 +4,15 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+APP_VERSION = "0.1.0"
+
 
 class SmokeHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health":
             self._send_json(200, {"status": "ok"})
+        elif self.path == "/version":
+            self._send_json(200, {"version": APP_VERSION})
         else:
             self._send_json(404, {"error": "not found"})
 

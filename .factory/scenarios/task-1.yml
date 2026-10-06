@@ -1,0 +1,25 @@
+version: 1
+scenario: "The service exposes GET /version reporting the app version while /health still works"
+
+steps:
+  - id: version
+    name: "GET /version returns 200 with the app version"
+    http:
+      method: GET
+      path: /version
+    expect:
+      status: 200
+      headers: { content-type: application/json }
+      json:
+        has: [version]
+        equals: { version: "0.1.0" }
+
+  - id: health
+    name: "GET /health still returns ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      json:
+        equals: { status: "ok" }
