@@ -1,0 +1,13 @@
+version: 1
+scenario: "The service reports healthy"
+
+steps:
+  - id: health
+    name: "GET /health returns ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      json:
+        equals: { status: "ok" }
