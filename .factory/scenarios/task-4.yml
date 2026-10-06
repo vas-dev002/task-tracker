@@ -1,0 +1,44 @@
+version: 1
+scenario: "GET /hello returns a greeting while /health and /ping stay intact"
+
+steps:
+  - id: hello
+    name: "GET /hello returns 200 with JSON {\"message\": \"hello\"}"
+    http:
+      method: GET
+      path: /hello
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"message"'
+      json:
+        has: [message]
+        equals: { message: "hello" }
+
+  - id: health
+    name: "The existing /health endpoint still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      json:
+        equals: { status: "ok" }
+
+  - id: ping
+    name: "The existing /ping endpoint still answers pong"
+    http:
+      method: GET
+      path: /ping
+    expect:
+      status: 200
+      json:
+        equals: { ping: "pong" }
+
+  - name: "A path that merely starts with /hello is still 404"
+    http:
+      method: GET
+      path: /hello/world
+    expect:
+      status: 404
