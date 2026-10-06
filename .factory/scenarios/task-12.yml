@@ -1,0 +1,36 @@
+version: 1
+scenario: "GET /live reports liveness while /health stays intact"
+
+steps:
+  - id: live
+    name: "GET /live returns 200 with JSON {\"alive\": true}"
+    http:
+      method: GET
+      path: /live
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"alive"'
+      json:
+        has: [alive]
+        equals: { alive: true }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "A path that merely starts with /live is still 404"
+    http:
+      method: GET
+      path: /live/extra
+    expect:
+      status: 404
