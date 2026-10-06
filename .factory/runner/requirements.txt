@@ -1,0 +1,7 @@
+# Runner deps only (NOT the app's stack — the app runs in its own container).
+pyyaml>=6
+httpx>=0.27
+# Pinned exactly: `playwright install` fetches the browser build matching the
+# installed package version, so an exact pin keeps the pip package and chromium
+# in lockstep across runs. Bump deliberately.
+playwright==1.63.0   # only used by browser scenarios

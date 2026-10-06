@@ -1,0 +1,34 @@
+version: 1
+scenario: "GET /ping responds pong while /health stays intact"
+
+steps:
+  - id: ping
+    name: "GET /ping returns 200 with {\"ping\": \"pong\"}"
+    http:
+      method: GET
+      path: /ping
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"ping"'
+      json:
+        has: [ping]
+        equals: { ping: "pong" }
+
+  - id: health
+    name: "/health still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      json:
+        equals: { status: "ok" }
+
+  - name: "An unknown path is still 404"
+    http:
+      method: GET
+      path: /ping/nope
+    expect:
+      status: 404
