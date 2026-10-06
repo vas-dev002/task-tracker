@@ -1,0 +1,34 @@
+version: 1
+scenario: "GET /about reports the app name while /health stays intact"
+
+steps:
+  - id: about
+    name: "GET /about returns 200 with JSON {\"name\": \"task-tracker\"}"
+    http:
+      method: GET
+      path: /about
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"name"'
+      json:
+        has: [name]
+        equals: { name: "task-tracker" }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      json:
+        equals: { status: "ok" }
+
+  - name: "A path that merely starts with /about is still 404"
+    http:
+      method: GET
+      path: /about/extra
+    expect:
+      status: 404

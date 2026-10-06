@@ -15,6 +15,8 @@ class SmokeHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"ping": "pong"})
         elif self.path == "/hello":
             self._send_json(200, {"message": "hello"})
+        elif self.path == "/about":
+            self._send_json(200, {"name": "task-tracker"})
         else:
             self._send_json(404, {"error": "not found"})
 
