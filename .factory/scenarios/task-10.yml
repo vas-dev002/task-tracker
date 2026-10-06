@@ -1,0 +1,36 @@
+version: 1
+scenario: "GET /ready reports readiness while /health stays intact"
+
+steps:
+  - id: ready
+    name: "GET /ready returns 200 with JSON {\"ready\": true}"
+    http:
+      method: GET
+      path: /ready
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"ready"'
+      json:
+        has: [ready]
+        equals: { ready: true }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "A path that merely starts with /ready is still 404"
+    http:
+      method: GET
+      path: /ready/extra
+    expect:
+      status: 404
