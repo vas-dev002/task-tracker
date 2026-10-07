@@ -1,0 +1,59 @@
+version: 1
+scenario: "GET /e2e-4847 returns 200 JSON {\"value\": 4847} while /health and existing routes stay intact"
+
+steps:
+  - id: e2e
+    name: "GET /e2e-4847 returns 200 with JSON {\"value\": 4847}"
+    http:
+      method: GET
+      path: /e2e-4847
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        has: [value]
+        equals: { value: 4847 }
+
+  - name: "A path that merely starts with /e2e-4847 is not matched and stays 404"
+    http:
+      method: GET
+      path: /e2e-4847/extra
+    expect:
+      status: 404
+
+  - name: "The value is the integer 4847, not a string"
+    http:
+      method: GET
+      path: /e2e-4847
+    expect:
+      status: 200
+      body_contains: '{"value": 4847}'
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "The pre-existing /status route still returns exactly its old payload"
+    http:
+      method: GET
+      path: /status
+    expect:
+      status: 200
+      json:
+        equals: { status: "ok" }
+
+  - name: "An unrelated unknown path is still 404"
+    http:
+      method: GET
+      path: /e2e-4847-nope
+    expect:
+      status: 404
