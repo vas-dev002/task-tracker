@@ -23,6 +23,8 @@ class SmokeHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"name": "task-tracker", "version": "0.1.0"})
         elif self.path == "/e2e-5605":
             self._send_json(200, {"value": 5605})
+        elif self.path == "/e2e-4411":
+            self._send_json(200, {"value": 4411})
         else:
             self._send_json(404, {"error": "not found"})
 

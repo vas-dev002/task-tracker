@@ -1,0 +1,55 @@
+version: 1
+scenario: "GET /e2e-4411 returns the value 4411 while /health stays intact"
+
+steps:
+  - id: e2e
+    name: "GET /e2e-4411 returns 200 with JSON {\"value\": 4411}"
+    http:
+      method: GET
+      path: /e2e-4411
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"value": 4411'
+      json:
+        has: [value]
+        equals: { value: 4411 }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - id: status
+    name: "GET /status still returns 200 with JSON {\"status\": \"ok\"}"
+    http:
+      method: GET
+      path: /status
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "A path that merely starts with /e2e-4411 is still 404"
+    http:
+      method: GET
+      path: /e2e-4411/extra
+    expect:
+      status: 404
+
+  - name: "An unrelated unknown path is still 404"
+    http:
+      method: GET
+      path: /e2e-4412
+    expect:
+      status: 404
