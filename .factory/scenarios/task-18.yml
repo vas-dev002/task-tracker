@@ -1,0 +1,54 @@
+version: 1
+scenario: "GET /e2e-5605 returns the value 5605 while /health stays intact"
+
+steps:
+  - id: e2e
+    name: "GET /e2e-5605 returns 200 with JSON {\"value\": 5605}"
+    http:
+      method: GET
+      path: /e2e-5605
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        has: [value]
+        equals: { value: 5605 }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - id: status
+    name: "GET /status still returns 200 with JSON {\"status\": \"ok\"}"
+    http:
+      method: GET
+      path: /status
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "A path that merely starts with /e2e-5605 is still 404"
+    http:
+      method: GET
+      path: /e2e-5605/extra
+    expect:
+      status: 404
+
+  - name: "A path that merely starts with /status is still 404"
+    http:
+      method: GET
+      path: /status/extra
+    expect:
+      status: 404
