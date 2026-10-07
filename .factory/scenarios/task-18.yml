@@ -11,7 +11,6 @@ steps:
       status: 200
       headers:
         content-type: application/json
-      body_contains: '"value"'
       json:
         has: [value]
         equals: { value: 5605 }
@@ -28,9 +27,28 @@ steps:
       json:
         equals: { status: "ok" }
 
+  - id: status
+    name: "GET /status still returns 200 with JSON {\"status\": \"ok\"}"
+    http:
+      method: GET
+      path: /status
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
   - name: "A path that merely starts with /e2e-5605 is still 404"
     http:
       method: GET
       path: /e2e-5605/extra
+    expect:
+      status: 404
+
+  - name: "A path that merely starts with /status is still 404"
+    http:
+      method: GET
+      path: /status/extra
     expect:
       status: 404
