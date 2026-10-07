@@ -1,0 +1,68 @@
+version: 1
+scenario: "GET /e2e-2938 returns 200 JSON {\"value\": 2938} while /health and the existing routes stay intact"
+
+steps:
+  - id: e2e
+    name: "GET /e2e-2938 returns 200 with JSON {\"value\": 2938}"
+    http:
+      method: GET
+      path: /e2e-2938
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        has: [value]
+        equals: { value: 2938 }
+
+  - name: "The payload is exactly the object the e2e suite expects, with 2938 as an integer"
+    http:
+      method: GET
+      path: /e2e-2938
+    expect:
+      status: 200
+      body_contains: '{"value": 2938}'
+
+  - name: "A path that merely starts with /e2e-2938 is not matched and stays 404"
+    http:
+      method: GET
+      path: /e2e-2938/extra
+    expect:
+      status: 404
+
+  - name: "A similarly named but different route is still 404"
+    http:
+      method: GET
+      path: /e2e-2938-nope
+    expect:
+      status: 404
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "The pre-existing /status route still returns exactly its old payload"
+    http:
+      method: GET
+      path: /status
+    expect:
+      status: 200
+      json:
+        equals: { status: "ok" }
+
+  - name: "The previously added e2e route /e2e-5605 still works"
+    http:
+      method: GET
+      path: /e2e-5605
+    expect:
+      status: 200
+      json:
+        equals: { value: 5605 }
