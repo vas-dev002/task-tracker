@@ -1,0 +1,54 @@
+version: 1
+scenario: "GET /e2e-1106 returns the value 1106 while /health stays intact"
+
+steps:
+  - id: e2e
+    name: "GET /e2e-1106 returns 200 with JSON {\"value\": 1106}"
+    http:
+      method: GET
+      path: /e2e-1106
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"value"'
+      json:
+        has: [value]
+        equals: { value: 1106 }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "The other long-standing endpoint /status still works"
+    http:
+      method: GET
+      path: /status
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "A path that merely starts with /e2e-1106 is still 404"
+    http:
+      method: GET
+      path: /e2e-1106/extra
+    expect:
+      status: 404
+
+  - name: "An unregistered path is still 404"
+    http:
+      method: GET
+      path: /e2e-1106-nope
+    expect:
+      status: 404
