@@ -1,0 +1,55 @@
+version: 1
+scenario: "GET /e2e-6815 returns the value 6815 while /health stays intact"
+
+steps:
+  - id: e2e
+    name: "GET /e2e-6815 returns 200 with JSON {\"value\": 6815}"
+    http:
+      method: GET
+      path: /e2e-6815
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"value"'
+      json:
+        has: [value]
+        equals: { value: 6815 }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - id: status
+    name: "GET /status still returns 200 with JSON {\"status\": \"ok\"}"
+    http:
+      method: GET
+      path: /status
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "A path that merely starts with /e2e-6815 is still 404"
+    http:
+      method: GET
+      path: /e2e-6815/extra
+    expect:
+      status: 404
+
+  - name: "The value is not reachable under a neighbouring e2e route"
+    http:
+      method: GET
+      path: /e2e-6815x
+    expect:
+      status: 404
