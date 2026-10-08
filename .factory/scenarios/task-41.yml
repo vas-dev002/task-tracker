@@ -1,0 +1,68 @@
+version: 1
+scenario: "GET /ui-4564 returns the value 4564 while /health and the other routes stay intact"
+
+steps:
+  - id: ui
+    name: "GET /ui-4564 returns 200 with JSON {\"value\": 4564}"
+    http:
+      method: GET
+      path: /ui-4564
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"value"'
+      json:
+        has: [value]
+        equals: { value: 4564 }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "The neighbouring /ui-7910 route still answers with its own value"
+    http:
+      method: GET
+      path: /ui-7910
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { value: 7910 }
+
+  - name: "A path that merely starts with /ui-4564 is still 404"
+    http:
+      method: GET
+      path: /ui-4564/extra
+    expect:
+      status: 404
+
+  - name: "Off-by-one neighbour /ui-4564x is still 404 (no prefix matching)"
+    http:
+      method: GET
+      path: /ui-4564x
+    expect:
+      status: 404
+
+  - name: "A neighbouring value route /ui-4565 does not exist"
+    http:
+      method: GET
+      path: /ui-4565
+    expect:
+      status: 404
+
+  - name: "The new route is GET-only and rejects a non-GET method"
+    http:
+      method: POST
+      path: /ui-4564
+    expect:
+      status: 501
