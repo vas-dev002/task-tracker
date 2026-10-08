@@ -1,0 +1,55 @@
+version: 1
+scenario: "GET /e2e-1472 returns 200 with JSON {\"value\": 1472} while existing routes stay intact"
+
+steps:
+  - id: e2e
+    name: "GET /e2e-1472 returns 200 with JSON {\"value\": 1472}"
+    http:
+      method: GET
+      path: /e2e-1472
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"value"'
+      json:
+        has: [value]
+        equals: { value: 1472 }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - id: status
+    name: "GET /status still returns 200 with JSON {\"status\": \"ok\"}"
+    http:
+      method: GET
+      path: /status
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
+  - name: "A path that merely starts with /e2e-1472 is still 404"
+    http:
+      method: GET
+      path: /e2e-1472/extra
+    expect:
+      status: 404
+
+  - name: "The value is not reachable under a neighbouring e2e route"
+    http:
+      method: GET
+      path: /e2e-1472x
+    expect:
+      status: 404
