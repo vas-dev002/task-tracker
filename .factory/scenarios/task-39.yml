@@ -1,0 +1,58 @@
+version: 1
+scenario: "GET /ui-7910 returns the value 7910 while /health stays intact"
+
+steps:
+  - id: ui
+    name: "GET /ui-7910 returns 200 with JSON {\"value\": 7910}"
+    http:
+      method: GET
+      path: /ui-7910
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"value"'
+      json:
+        has: [value]
+        equals: { value: 7910 }
+
+  - id: health
+    name: "The existing /health endpoint is unchanged and still reports ok"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200
+      headers:
+        content-type: application/json
+      body_contains: '"status"'
+      json:
+        equals: { status: "ok" }
+
+  - name: "A path that merely starts with /ui-7910 is still 404"
+    http:
+      method: GET
+      path: /ui-7910/extra
+    expect:
+      status: 404
+
+  - name: "A neighbouring path is still 404"
+    http:
+      method: GET
+      path: /ui-7910x
+    expect:
+      status: 404
+
+  - name: "The route is GET-only and rejects a non-GET method"
+    http:
+      method: POST
+      path: /ui-7910
+    expect:
+      status: 501
+
+  - name: "The 7910 value is served under its own route, not under a different value route"
+    http:
+      method: GET
+      path: /ui-7911
+    expect:
+      status: 404
