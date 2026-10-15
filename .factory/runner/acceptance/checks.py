@@ -7,8 +7,10 @@ embedded in a larger string are stringified.
 
 Expectations: each `expect` key maps to a check `(want, ctx) -> (ok, message)`.
 `ctx` carries whatever the driver produced — status/headers/json/text for http,
-exit/stdout/stderr for cli/custom/library, page/url for browser, plus `_rt` so a
-check can shell into the container (file_exists).
+exit/stdout/stderr for cli/custom/library, page/url/status/console_errors for
+browser (status is the navigation response code; console_errors is the list of
+error-level console + page-exception messages), plus `_rt` so a check can shell
+into the container (file_exists).
 """
 
 from __future__ import annotations
@@ -151,6 +153,8 @@ def _text_visible(want, ctx):
     page = ctx.get("page")
     if page is None:
         return False, "text_visible needs a browser page"
+    if not str(want).strip():
+        return False, "text_visible needs a non-empty text value"
     try:
         page.get_by_text(want).first.wait_for(state="visible", timeout=_VIS_TIMEOUT_MS)
         return True, ""
@@ -162,11 +166,25 @@ def _visible(want, ctx):
     page = ctx.get("page")
     if page is None:
         return False, "visible needs a browser page"
+    if not str(want).strip():
+        return False, "visible needs a non-empty selector"
     try:
         page.locator(want).first.wait_for(state="visible", timeout=_VIS_TIMEOUT_MS)
         return True, ""
     except Exception:                            # noqa: BLE001
         return False, f"not visible: {want}"
+
+
+def _console_errors(want, ctx):
+    """Assert the page emitted at most `want` error-level console / page errors.
+
+    `want` is the max allowed count; a bool / empty / 0 means "none allowed" — the
+    usual `console_errors: 0`. Lists the first few for diagnosis on failure."""
+    got = ctx.get("console_errors")
+    if got is None:
+        return False, "console_errors needs a browser page"
+    allowed = want if isinstance(want, int) and not isinstance(want, bool) else 0
+    return len(got) <= allowed, f"{len(got)} console error(s): {got[:5]}"
 
 
 _CHECKS = {
@@ -180,4 +198,34 @@ _CHECKS = {
     "url_contains": _url_contains,
     "text_visible": _text_visible,
     "visible": _visible,
+    "console_errors": _console_errors,
 }
+
+
+# Checks whose value is a substring / selector / path the runner searches for: a
+# blank value is never satisfiable, so it's an authoring mistake rather than a
+# test that legitimately fails.
+_NONEMPTY_VALUE_CHECKS = frozenset({
+    "body_contains", "stdout_contains", "file_exists",
+    "url_contains", "text_visible", "visible",
+})
+
+
+def validate_expect(expect):
+    """Statically validate an `expect` mapping against the vocabulary.
+
+    Returns a list of problems ([] == usable). Catches the authoring mistakes the
+    runner can otherwise only surface at run time: an unknown check key, a blank
+    substring/selector (`text_visible: ""`), or a `console_errors` that isn't an
+    integer count (`console_errors: []` instead of `0`). Callers run this before a
+    scenario is written so a bad one is repaired rather than failing in CI.
+    """
+    problems = []
+    for key, want in (expect or {}).items():
+        if key not in _CHECKS:
+            problems.append(f"unknown expect {key!r}")
+        elif key in _NONEMPTY_VALUE_CHECKS and not str("" if want is None else want).strip():
+            problems.append(f"{key} needs a non-empty value, got {want!r}")
+        elif key == "console_errors" and (isinstance(want, bool) or not isinstance(want, int)):
+            problems.append(f"console_errors must be an integer count (e.g. 0), got {want!r}")
+    return problems

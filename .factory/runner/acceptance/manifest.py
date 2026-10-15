@@ -31,16 +31,27 @@ def load_runtime(path):
         raise ManifestError(
             f"app.type must be one of {sorted(APP_TYPES)}, got {atype!r} ({path})"
         )
+    checks = data.get("checks")
+    if checks is not None:
+        if not isinstance(checks, list):
+            raise ManifestError(f"`checks` must be a list of {{name?, run, cwd?}} ({path})")
+        for i, c in enumerate(checks):
+            if not isinstance(c, dict) or not c.get("run"):
+                raise ManifestError(f"checks[{i}] needs a 'run' command ({path})")
     data.setdefault("runtime", {})
     data.setdefault("run", {})
     return data
 
 
 def load_scenarios(directory):
-    """Parse every `.factory/scenarios/*.yml` → [dict], sorted by filename."""
+    """Parse every `.factory/scenarios/*.yml` → [dict], sorted by filename.
+
+    Returns [] when the directory is absent or empty — a task may be behaviourally
+    not-testable (no scenarios) yet still gated by project checks, so zero scenarios
+    is valid, not an error. A malformed scenario file is still a hard error."""
     d = pathlib.Path(directory)
     if not d.is_dir():
-        raise ManifestError(f"scenarios directory not found: {directory}")
+        return []
 
     files = sorted([*d.glob("*.yml"), *d.glob("*.yaml")])
     scenarios = []
@@ -52,7 +63,4 @@ def load_scenarios(directory):
         doc.setdefault("scenario", f.stem)
         doc["_file"] = f.name
         scenarios.append(doc)
-
-    if not scenarios:
-        raise ManifestError(f"no scenario files (*.yml) in {directory}")
     return scenarios

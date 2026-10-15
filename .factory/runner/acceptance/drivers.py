@@ -105,17 +105,31 @@ def _browser(spec, expect, rt, artifacts):
 
     base = (rt.base_url or "").rstrip("/")
     shots = []
+    status = None
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
+        # Collect error-level console messages + uncaught page exceptions so a
+        # scenario can assert `console_errors: 0`. An SPA that boots with a JS error
+        # often still returns 200 and renders <app-root>, so this catches what the
+        # status/visibility checks miss. Registered before goto to catch load-time.
+        console_errors = []
+        page.on("console",
+                lambda m: console_errors.append(m.text) if m.type == "error" else None)
+        page.on("pageerror", lambda e: console_errors.append(str(e)))
         try:
             if spec.get("goto") is not None:
                 # networkidle, not the default 'load': an SPA (Angular/React/…)
                 # paints after its JS bundle executes, so 'load' fires on a blank
                 # page. Waiting for the network to settle gives it time to render
                 # before we screenshot/assert.
-                page.goto(base + "/" + str(spec["goto"]).lstrip("/"),
-                          wait_until="networkidle")
+                resp = page.goto(base + "/" + str(spec["goto"]).lstrip("/"),
+                                 wait_until="networkidle")
+                # Expose the navigation response status (index.html for an SPA) so a
+                # browser step can assert `status: 200` like an http step. None when
+                # the goto yields no response (e.g. a same-document route change).
+                if resp is not None:
+                    status = resp.status
             for item in (spec.get("fill") or []):
                 page.fill(item["selector"], str(item["value"]))
             if spec.get("click"):
@@ -124,7 +138,8 @@ def _browser(spec, expect, rt, artifacts):
                 page.wait_for_selector(spec["wait_for"])
             if "screenshot" in spec:
                 shots.append(_screenshot(page, spec["screenshot"], artifacts))
-            ctx = {"page": page, "url": page.url, "_rt": rt}
+            ctx = {"page": page, "url": page.url, "status": status,
+                   "console_errors": console_errors, "_rt": rt}
             failures = checks.check_expect(expect, ctx)
         finally:
             browser.close()

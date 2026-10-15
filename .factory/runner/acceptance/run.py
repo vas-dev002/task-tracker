@@ -16,7 +16,7 @@ import json
 import logging
 import os
 
-from . import drivers, manifest
+from . import drivers, manifest, project_checks
 from .runtime import Runtime
 
 log = logging.getLogger("acceptance.run")
@@ -36,11 +36,21 @@ def main(argv=None):
     os.makedirs(args.artifacts, exist_ok=True)
 
     results = []
+    checks = []
     try:
         with Runtime(rt_spec, args.artifacts, workspace=args.workspace) as rt:
-            for sc in scenarios:
-                log.info("scenario: %s (%s)", sc.get("scenario"), sc.get("_file"))
-                results.append(drivers.run_scenario(sc, rt, args.artifacts))
+            # Project-level build/test gates first (discovered, or the contract's
+            # `checks:` override). A hard failure skips the behavioural scenarios —
+            # no point exercising behaviour that doesn't build.
+            checks = project_checks.run(rt, project_checks.plan(rt_spec, rt.workspace))
+            for c in checks:
+                log.info("check [%s] %s (%s)", c["status"], c["name"], c["cwd"])
+            if any(c["status"] == "fail" for c in checks):
+                log.error("project checks failed; skipping behavioural scenarios")
+            else:
+                for sc in scenarios:
+                    log.info("scenario: %s (%s)", sc.get("scenario"), sc.get("_file"))
+                    results.append(drivers.run_scenario(sc, rt, args.artifacts))
     except Exception as exc:        # noqa: BLE001 - bring-up failure == acceptance failure
         log.error("runtime error: %s", exc)
         results.append({
@@ -49,7 +59,9 @@ def main(argv=None):
                        "failures": [str(exc)], "screenshots": []}],
         })
 
-    summary = {"ok": all(r["ok"] for r in results), "scenarios": results}
+    checks_ok = all(c["status"] != "fail" for c in checks)
+    scenarios_ok = all(r["ok"] for r in results)
+    summary = {"ok": checks_ok and scenarios_ok, "checks": checks, "scenarios": results}
     with open(os.path.join(args.artifacts, "summary.json"), "w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2)
     _print(summary)
@@ -57,6 +69,11 @@ def main(argv=None):
 
 
 def _print(summary):
+    for c in summary.get("checks", []):
+        mark = {"pass": "ok ", "fail": "XX ", "skip": ".. "}.get(c["status"], "?? ")
+        print(f"[{c['status'].upper()}] check {c['name']}")
+        if c["status"] != "pass" and c.get("detail"):
+            print(f"   {mark}{c['detail']}")
     for sc in summary["scenarios"]:
         print(f"[{'PASS' if sc['ok'] else 'FAIL'}] {sc['scenario']} ({sc['file']})")
         for st in sc["steps"]:
