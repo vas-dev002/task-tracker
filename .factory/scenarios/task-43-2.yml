@@ -1,0 +1,7 @@
+version: 1
+scenario: "/health remains unchanged and healthy"
+steps:
+  - name: "Probe the existing health endpoint"
+    http: { method: GET, path: "/health" }
+    expect:
+      status: 200

@@ -29,6 +29,8 @@ class SmokeHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"value": 7910})
         elif self.path == "/ui-4564":
             self._send_json(200, {"value": 4564})
+        elif self.path == "/ui-8490":
+            self._send_json(200, {"value": 8490})
         else:
             self._send_json(404, {"error": "not found"})
 

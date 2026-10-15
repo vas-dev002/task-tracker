@@ -1,0 +1,10 @@
+version: 1
+scenario: "GET /ui-8490 returns 200 with JSON {\"value\": 8490}"
+steps:
+  - name: "Request the new endpoint"
+    http: { method: GET, path: "/ui-8490" }
+    expect:
+      status: 200
+      json:
+        equals:
+          value: 8490
