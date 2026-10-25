@@ -109,6 +109,12 @@ def _browser(spec, expect, rt, artifacts):
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
+        # Size the viewport before anything loads, so a breakpoint-specific scenario
+        # (a mobile menu "under 720px") actually renders at that width. Without this
+        # the page uses Playwright's default desktop size and asserts the wrong layout.
+        vp = spec.get("viewport")
+        if vp:
+            page.set_viewport_size({"width": int(vp["width"]), "height": int(vp["height"])})
         # Collect error-level console messages + uncaught page exceptions so a
         # scenario can assert `console_errors: 0`. An SPA that boots with a JS error
         # often still returns 200 and renders <app-root>, so this catches what the
