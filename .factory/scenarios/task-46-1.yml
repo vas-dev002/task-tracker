@@ -1,0 +1,13 @@
+version: 1
+scenario: "GET /time returns 200 with a JSON body carrying an ISO 8601 UTC timestamp under the key 'time'"
+steps:
+  - id: time
+    name: "Request /time from the running app"
+    http:
+      method: GET
+      path: "/time"
+    expect:
+      status: 200
+      body_contains: "time"
+      json:
+        has: ["time"]
