@@ -1,0 +1,9 @@
+version: 1
+scenario: "Existing GET /health endpoint keeps working"
+steps:
+  - name: "Request /health and check it still succeeds"
+    http:
+      method: GET
+      path: /health
+    expect:
+      status: 200

@@ -1,0 +1,13 @@
+version: 1
+scenario: "GET /date returns 200 with JSON containing today's UTC date as YYYY-MM-DD"
+steps:
+  - name: "Request /date and check status, shape and UTC date value"
+    http:
+      method: GET
+      path: /date
+    expect:
+      status: 200
+      json:
+        has: ["date"]
+        equals:
+          date: "${now.utc:%Y-%m-%d}"
