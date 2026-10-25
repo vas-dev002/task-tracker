@@ -1,0 +1,13 @@
+version: 1
+scenario: "GET /health keeps working alongside the new /time endpoint"
+steps:
+  - name: "Health endpoint still responds 200"
+    http: { method: GET, path: "/health" }
+    expect:
+      status: 200
+
+  - name: "Time endpoint responds 200 after health check"
+    http: { method: GET, path: "/time" }
+    expect:
+      status: 200
+      json: { has: ["time"] }

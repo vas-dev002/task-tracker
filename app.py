@@ -3,9 +3,15 @@
 import json
 import os
 import time
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 START_TIME = time.monotonic()
+
+
+def _utc_now_iso():
+    """Current server time as an ISO 8601 UTC timestamp, e.g. 2024-01-01T00:00:00Z."""
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 class SmokeHandler(BaseHTTPRequestHandler):
@@ -37,6 +43,8 @@ class SmokeHandler(BaseHTTPRequestHandler):
         elif self.path == "/uptime":
             uptime = max(0.0, time.monotonic() - START_TIME)
             self._send_json(200, {"uptime_seconds": round(uptime, 3)})
+        elif self.path == "/time":
+            self._send_json(200, {"time": _utc_now_iso()})
         else:
             self._send_json(404, {"error": "not found"})
 
