@@ -3,6 +3,7 @@
 import json
 import os
 import time
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 START_TIME = time.monotonic()
@@ -34,6 +35,9 @@ class SmokeHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"value": 4564})
         elif self.path == "/ui-8490":
             self._send_json(200, {"value": 8490})
+        elif self.path == "/time":
+            now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            self._send_json(200, {"time": now})
         elif self.path == "/uptime":
             uptime = max(0.0, time.monotonic() - START_TIME)
             self._send_json(200, {"uptime_seconds": round(uptime, 3)})

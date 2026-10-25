@@ -1,0 +1,19 @@
+version: 1
+scenario: "GET /health keeps working alongside the new /time endpoint"
+steps:
+  - id: time
+    name: "New /time endpoint responds"
+    http:
+      method: GET
+      path: "/time"
+    expect:
+      status: 200
+      json:
+        has: ["time"]
+  - id: health
+    name: "Existing /health endpoint still responds"
+    http:
+      method: GET
+      path: "/health"
+    expect:
+      status: 200
