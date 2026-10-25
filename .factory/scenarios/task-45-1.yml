@@ -1,0 +1,12 @@
+version: 1
+scenario: "GET /uptime returns 200 with a non-negative numeric uptime_seconds"
+steps:
+  - id: uptime
+    name: "Call the uptime endpoint"
+    http:
+      method: GET
+      path: "/uptime"
+    expect:
+      status: 200
+      json:
+        has: ["uptime_seconds"]

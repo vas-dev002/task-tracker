@@ -1,0 +1,16 @@
+version: 1
+scenario: "Health endpoint keeps working alongside the new uptime endpoint"
+steps:
+  - name: "Health check still responds"
+    http:
+      method: GET
+      path: "/health"
+    expect:
+      status: 200
+  - name: "Uptime endpoint available on the same running app"
+    http:
+      method: GET
+      path: "/uptime"
+    expect:
+      status: 200
+      body_contains: "uptime_seconds"

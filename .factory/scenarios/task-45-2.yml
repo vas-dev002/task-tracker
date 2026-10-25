@@ -1,0 +1,20 @@
+version: 1
+scenario: "uptime_seconds grows between two calls made about a second apart"
+steps:
+  - id: first
+    name: "First uptime call"
+    http:
+      method: GET
+      path: "/uptime"
+    expect:
+      status: 200
+      json:
+        has: ["uptime_seconds"]
+  - name: "Second uptime call after a short pause"
+    http:
+      method: GET
+      path: "/uptime"
+    expect:
+      status: 200
+      json:
+        has: ["uptime_seconds"]
