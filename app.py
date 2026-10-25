@@ -2,7 +2,10 @@
 
 import json
 import os
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+START_TIME = time.monotonic()
 
 
 class SmokeHandler(BaseHTTPRequestHandler):
@@ -31,6 +34,9 @@ class SmokeHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"value": 4564})
         elif self.path == "/ui-8490":
             self._send_json(200, {"value": 8490})
+        elif self.path == "/uptime":
+            uptime = max(0.0, time.monotonic() - START_TIME)
+            self._send_json(200, {"uptime_seconds": round(uptime, 3)})
         else:
             self._send_json(404, {"error": "not found"})
 

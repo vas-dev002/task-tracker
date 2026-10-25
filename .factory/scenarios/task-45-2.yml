@@ -1,0 +1,36 @@
+version: 1
+scenario: "uptime_seconds grows between two calls made about a second apart"
+steps:
+  - id: first
+    name: "First uptime call"
+    http:
+      method: GET
+      path: "/uptime"
+    expect:
+      status: 200
+      json:
+        has: ["uptime_seconds"]
+      json_number:
+        uptime_seconds: { min: 0 }
+
+  - name: "Wait about a second in the app container so uptime has to advance"
+    custom:
+      run: "sleep 1"
+    expect:
+      exit: 0
+
+  - name: "Second uptime call after the pause must report a strictly greater value"
+    http:
+      method: GET
+      path: "/uptime"
+    expect:
+      status: 200
+      json:
+        has: ["uptime_seconds"]
+      json_number:
+        uptime_seconds: { min: 0 }
+      # Compare the two readings: call 2 must be greater than call 1. Without
+      # this, a constant uptime_seconds would pass.
+      json_greater_than:
+        path: uptime_seconds
+        than: "${steps.first.response.json.uptime_seconds}"
