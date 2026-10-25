@@ -3,9 +3,7 @@
 Interpolation: a string value `${steps.<id>.response.json.<path>}` is resolved
 against the results of earlier steps (keyed by their `id`). A value that is a
 single token keeps the referenced type (e.g. a number stays a number); tokens
-embedded in a larger string are stringified. A reference that cannot be resolved
-raises `UnresolvedReference` — it never degrades to null, because an `expect`
-that silently became null would stop asserting anything.
+embedded in a larger string are stringified.
 
 Expectations: each `expect` key maps to a check `(want, ctx) -> (ok, message)`.
 `ctx` carries whatever the driver produced — status/headers/json/text for http,
@@ -17,10 +15,7 @@ into the container (file_exists).
 
 from __future__ import annotations
 
-import logging
 import re
-
-log = logging.getLogger("acceptance.checks")
 
 _TOKEN = re.compile(r"\$\{([^}]+)\}")
 
@@ -28,12 +23,6 @@ _TOKEN = re.compile(r"\$\{([^}]+)\}")
 # --- interpolation -----------------------------------------------------------
 
 def interpolate(value, steps):
-    """Substitute `${steps...}` references in `value`.
-
-    Raises `UnresolvedReference` rather than degrading to `None`/`"None"`: a bad
-    reference in an `expect` would otherwise validate as a check with a null want
-    (e.g. a growth comparison silently collapsing to a no-op).
-    """
     if isinstance(value, str):
         whole = _TOKEN.fullmatch(value)
         if whole:                               # single token → preserve type
@@ -46,37 +35,20 @@ def interpolate(value, steps):
     return value
 
 
-class UnresolvedReference(Exception):
-    """A `${steps...}` reference could not be resolved against earlier steps."""
-
-
 def _resolve(path, steps):
-    """Resolve `${steps.<id>.response.json.<path>}` against earlier step results.
-
-    An unresolvable reference is an authoring/plumbing bug, never a satisfied
-    expectation: it raises `UnresolvedReference` so the step fails loudly instead
-    of silently rendering a null that a check might tolerate.
-    """
     parts = path.strip().split(".")
     if parts[0] != "steps":
-        raise UnresolvedReference(f"reference ${{{path}}} must start with 'steps.'")
+        raise KeyError(f"reference ${{{path}}} must start with 'steps.'")
     cur = steps
     for part in parts[1:]:
         if isinstance(cur, dict):
             if part not in cur:
-                raise UnresolvedReference(
-                    f"reference ${{{path}}}: no step/result key {part!r}")
+                raise KeyError(f"reference ${{{path}}}: no key {part!r}")
             cur = cur[part]
         elif isinstance(cur, list):
-            try:
-                cur = cur[int(part)]
-            except (ValueError, IndexError):
-                raise UnresolvedReference(
-                    f"reference ${{{path}}}: bad list index {part!r}") from None
+            cur = cur[int(part)]
         else:
-            raise UnresolvedReference(
-                f"reference ${{{path}}}: cannot index {type(cur).__name__} "
-                f"with {part!r}")
+            raise KeyError(f"reference ${{{path}}}: cannot index {type(cur).__name__}")
     return cur
 
 
@@ -147,55 +119,6 @@ def _subset(want, got):
                 return False, msg
         return True, ""
     return (want == got), f"{got!r} != {want!r}"
-
-
-def _json_number(want, ctx):
-    """Assert JSON keys hold numbers within an inclusive range.
-
-    Vocabulary extension: `has` only proves a key exists, so a constant or a
-    string would pass. `want` maps key -> {min, max} (both optional, inclusive);
-    every entry must address a number that is not a bool. Covers "is a numeric,
-    non-negative value" style criteria.
-    """
-    body = ctx.get("json")
-    if not isinstance(body, dict):
-        return False, "response body is not a JSON object"
-    for key, rng in (want or {}).items():
-        if key not in body:
-            return False, f"json missing key {key!r}"
-        got = body[key]
-        if isinstance(got, bool) or not isinstance(got, (int, float)):
-            return False, f"{key}={got!r} is not a number"
-        rng = rng or {}
-        if "min" in rng and got < rng["min"]:
-            return False, f"{key}={got!r} < min {rng['min']!r}"
-        if "max" in rng and got > rng["max"]:
-            return False, f"{key}={got!r} > max {rng['max']!r}"
-    return True, ""
-
-
-def _json_greater_than(want, ctx):
-    """Assert the interpolated value under `path` is greater than `than`.
-
-    `{"path": "uptime_seconds", "than": <interpolated literal>}`. Both sides must
-    be numbers. A missing/unresolvable `than` fails the check — dropping it would
-    turn a comparison ("does it grow?") into a key-presence check that a constant
-    value passes.
-    """
-    body = ctx.get("json")
-    if not isinstance(body, dict):
-        return False, "response body is not a JSON object"
-    path = want.get("path")
-    if path not in body:
-        return False, f"json missing key {path!r}"
-    got = body[path]
-    if "than" not in want or want.get("than") is None:
-        return False, f"json_greater_than: no threshold resolved for {path!r}"
-    than = want["than"]
-    for label, val in (("value", got), ("threshold", than)):
-        if isinstance(val, bool) or not isinstance(val, (int, float)):
-            return False, f"{label} {val!r} is not a number"
-    return got > than, f"{path}={got!r} is not greater than {than!r}"
 
 
 def _exit(want, ctx):
@@ -269,8 +192,6 @@ _CHECKS = {
     "body_contains": _body_contains,
     "headers": _headers,
     "json": _json,
-    "json_number": _json_number,
-    "json_greater_than": _json_greater_than,
     "exit": _exit,
     "stdout_contains": _stdout_contains,
     "file_exists": _file_exists,
@@ -307,9 +228,4 @@ def validate_expect(expect):
             problems.append(f"{key} needs a non-empty value, got {want!r}")
         elif key == "console_errors" and (isinstance(want, bool) or not isinstance(want, int)):
             problems.append(f"console_errors must be an integer count (e.g. 0), got {want!r}")
-        elif key == "json_number" and not isinstance(want, dict):
-            problems.append(f"json_number must map key -> {{min?, max?}}, got {want!r}")
-        elif key == "json_greater_than" and not (
-                isinstance(want, dict) and isinstance(want.get("path"), str)):
-            problems.append(f"json_greater_than needs a 'path' string, got {want!r}")
     return problems
