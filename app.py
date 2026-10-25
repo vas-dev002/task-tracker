@@ -38,6 +38,9 @@ class SmokeHandler(BaseHTTPRequestHandler):
         elif self.path == "/time":
             now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
             self._send_json(200, {"time": now})
+        elif self.path == "/date":
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            self._send_json(200, {"date": today})
         elif self.path == "/uptime":
             uptime = max(0.0, time.monotonic() - START_TIME)
             self._send_json(200, {"uptime_seconds": round(uptime, 3)})
