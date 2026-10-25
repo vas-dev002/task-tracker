@@ -8,6 +8,25 @@ steps:
       path: "/time"
     expect:
       status: 200
+      headers:
+        content-type: application/json
       body_contains: "time"
       json:
         has: ["time"]
+  # Value-shape gate for "time parses as an ISO 8601 UTC timestamp". Key presence
+  # alone (above) would let "not-a-timestamp", a naive local time, or a non-UTC
+  # offset pass, so re-parse the actual field value and assert ISO 8601 + UTC.
+  - id: time_parses_utc
+    name: "The reported time parses as an ISO 8601 UTC timestamp"
+    run: >-
+      python -c "import sys; from datetime import datetime, timezone;
+      b=sys.argv[1];
+      d=datetime.fromisoformat(b.replace('Z','+00:00'));
+      assert 'T' in b, 'not an ISO 8601 date-time: %r' % (b,);
+      assert d.tzinfo is not None, 'time is naive (no timezone): %r' % (b,);
+      assert d.utcoffset() == timezone.utc.utcoffset(None), 'time is not UTC: %r' % (b,);
+      print('ok ' + b)"
+      "${steps.time.response.json.time}"
+    expect:
+      exit: 0
+      stdout_contains: "ok "
