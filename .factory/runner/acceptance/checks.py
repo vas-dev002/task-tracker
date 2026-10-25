@@ -3,7 +3,9 @@
 Interpolation: a string value `${steps.<id>.response.json.<path>}` is resolved
 against the results of earlier steps (keyed by their `id`). A value that is a
 single token keeps the referenced type (e.g. a number stays a number); tokens
-embedded in a larger string are stringified.
+embedded in a larger string are stringified. A reference that cannot be resolved
+raises `UnresolvedReference` — it never degrades to null, because an `expect`
+that silently became null would stop asserting anything.
 
 Expectations: each `expect` key maps to a check `(want, ctx) -> (ok, message)`.
 `ctx` carries whatever the driver produced — status/headers/json/text for http,
@@ -26,6 +28,12 @@ _TOKEN = re.compile(r"\$\{([^}]+)\}")
 # --- interpolation -----------------------------------------------------------
 
 def interpolate(value, steps):
+    """Substitute `${steps...}` references in `value`.
+
+    Raises `UnresolvedReference` rather than degrading to `None`/`"None"`: a bad
+    reference in an `expect` would otherwise validate as a check with a null want
+    (e.g. a growth comparison silently collapsing to a no-op).
+    """
     if isinstance(value, str):
         whole = _TOKEN.fullmatch(value)
         if whole:                               # single token → preserve type
@@ -38,32 +46,37 @@ def interpolate(value, steps):
     return value
 
 
-# Literal marker for a reference that could not be resolved. Only
-# `json_greater_than` treats it specially (it drops such a check rather than
-# failing, so a scenario authored against another backend keeps its meaning).
-_UNRESOLVED = "__unresolved_reference__"
+class UnresolvedReference(Exception):
+    """A `${steps...}` reference could not be resolved against earlier steps."""
 
 
 def _resolve(path, steps):
+    """Resolve `${steps.<id>.response.json.<path>}` against earlier step results.
+
+    An unresolvable reference is an authoring/plumbing bug, never a satisfied
+    expectation: it raises `UnresolvedReference` so the step fails loudly instead
+    of silently rendering a null that a check might tolerate.
+    """
     parts = path.strip().split(".")
     if parts[0] != "steps":
-        raise KeyError(f"reference ${{{path}}} must start with 'steps.'")
+        raise UnresolvedReference(f"reference ${{{path}}} must start with 'steps.'")
     cur = steps
     for part in parts[1:]:
         if isinstance(cur, dict):
             if part not in cur:
-                # Missing key: render as YAML `null` instead of raising, so a
-                # scenario written against a richer backend still loads; the check
-                # that consumes it decides (json_greater_than drops it).
-                log.debug("reference ${{{path}}}: no key %r, resolved to null", part)
-                return None
+                raise UnresolvedReference(
+                    f"reference ${{{path}}}: no step/result key {part!r}")
             cur = cur[part]
         elif isinstance(cur, list):
-            cur = cur[int(part)]
+            try:
+                cur = cur[int(part)]
+            except (ValueError, IndexError):
+                raise UnresolvedReference(
+                    f"reference ${{{path}}}: bad list index {part!r}") from None
         else:
-            log.debug("reference ${{{path}}}: cannot index %s, resolved to null",
-                      type(cur).__name__)
-            return None
+            raise UnresolvedReference(
+                f"reference ${{{path}}}: cannot index {type(cur).__name__} "
+                f"with {part!r}")
     return cur
 
 
@@ -161,15 +174,13 @@ def _json_number(want, ctx):
     return True, ""
 
 
-_DROPPED = object()
-
-
 def _json_greater_than(want, ctx):
     """Assert the interpolated value under `path` is greater than `than`.
 
-    `{"path": "uptime_seconds", "than": <interpolated literal>}`. A `than` that
-    renders as `null` because the reference could not be resolved drops the check
-    (it cannot be enforced) instead of erroring out. Both sides must be numbers.
+    `{"path": "uptime_seconds", "than": <interpolated literal>}`. Both sides must
+    be numbers. A missing/unresolvable `than` fails the check — dropping it would
+    turn a comparison ("does it grow?") into a key-presence check that a constant
+    value passes.
     """
     body = ctx.get("json")
     if not isinstance(body, dict):
@@ -178,10 +189,9 @@ def _json_greater_than(want, ctx):
     if path not in body:
         return False, f"json missing key {path!r}"
     got = body[path]
-    than = want.get("than")
-    if than is _DROPPED or than is _UNRESOLVED or (than is None and "than" in want):
-        log.debug("json_greater_than: %r unresolvable, check dropped", path)
-        return True, ""
+    if "than" not in want or want.get("than") is None:
+        return False, f"json_greater_than: no threshold resolved for {path!r}"
+    than = want["than"]
     for label, val in (("value", got), ("threshold", than)):
         if isinstance(val, bool) or not isinstance(val, (int, float)):
             return False, f"{label} {val!r} is not a number"
