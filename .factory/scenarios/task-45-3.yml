@@ -1,5 +1,5 @@
 version: 1
-scenario: "Health endpoint keeps working alongside the new uptime endpoint"
+scenario: "Health and other pre-existing endpoints keep working alongside /uptime"
 steps:
   - name: "Health check still responds"
     http:
@@ -7,6 +7,11 @@ steps:
       path: "/health"
     expect:
       status: 200
+      headers:
+        content-type: application/json
+      json:
+        equals: { status: "ok" }
+
   - name: "Uptime endpoint available on the same running app"
     http:
       method: GET
@@ -14,3 +19,30 @@ steps:
     expect:
       status: 200
       body_contains: "uptime_seconds"
+      json:
+        has: ["uptime_seconds"]
+
+  - name: "The neighbouring /ping route still answers with its own payload"
+    http:
+      method: GET
+      path: "/ping"
+    expect:
+      status: 200
+      json:
+        equals: { ping: "pong" }
+
+  - name: "The neighbouring /info route still answers with its own payload"
+    http:
+      method: GET
+      path: "/info"
+    expect:
+      status: 200
+      json:
+        has: ["name", "version"]
+
+  - name: "An unknown path is still a 404, so /uptime did not swallow the fallback"
+    http:
+      method: GET
+      path: "/uptime-not-a-route"
+    expect:
+      status: 404

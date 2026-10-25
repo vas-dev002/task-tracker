@@ -8,5 +8,12 @@ steps:
       path: "/uptime"
     expect:
       status: 200
+      headers:
+        content-type: application/json
+      body_contains: "uptime_seconds"
       json:
         has: ["uptime_seconds"]
+      # The value must be a number (not a string/bool) and non-negative — key
+      # presence alone would let a constant "0" string pass.
+      json_number:
+        uptime_seconds: { min: 0 }

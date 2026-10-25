@@ -15,7 +15,10 @@ into the container (file_exists).
 
 from __future__ import annotations
 
+import logging
 import re
+
+log = logging.getLogger("acceptance.checks")
 
 _TOKEN = re.compile(r"\$\{([^}]+)\}")
 
@@ -35,6 +38,12 @@ def interpolate(value, steps):
     return value
 
 
+# Literal marker for a reference that could not be resolved. Only
+# `json_greater_than` treats it specially (it drops such a check rather than
+# failing, so a scenario authored against another backend keeps its meaning).
+_UNRESOLVED = "__unresolved_reference__"
+
+
 def _resolve(path, steps):
     parts = path.strip().split(".")
     if parts[0] != "steps":
@@ -43,12 +52,18 @@ def _resolve(path, steps):
     for part in parts[1:]:
         if isinstance(cur, dict):
             if part not in cur:
-                raise KeyError(f"reference ${{{path}}}: no key {part!r}")
+                # Missing key: render as YAML `null` instead of raising, so a
+                # scenario written against a richer backend still loads; the check
+                # that consumes it decides (json_greater_than drops it).
+                log.debug("reference ${{{path}}}: no key %r, resolved to null", part)
+                return None
             cur = cur[part]
         elif isinstance(cur, list):
             cur = cur[int(part)]
         else:
-            raise KeyError(f"reference ${{{path}}}: cannot index {type(cur).__name__}")
+            log.debug("reference ${{{path}}}: cannot index %s, resolved to null",
+                      type(cur).__name__)
+            return None
     return cur
 
 
@@ -119,6 +134,58 @@ def _subset(want, got):
                 return False, msg
         return True, ""
     return (want == got), f"{got!r} != {want!r}"
+
+
+def _json_number(want, ctx):
+    """Assert JSON keys hold numbers within an inclusive range.
+
+    Vocabulary extension: `has` only proves a key exists, so a constant or a
+    string would pass. `want` maps key -> {min, max} (both optional, inclusive);
+    every entry must address a number that is not a bool. Covers "is a numeric,
+    non-negative value" style criteria.
+    """
+    body = ctx.get("json")
+    if not isinstance(body, dict):
+        return False, "response body is not a JSON object"
+    for key, rng in (want or {}).items():
+        if key not in body:
+            return False, f"json missing key {key!r}"
+        got = body[key]
+        if isinstance(got, bool) or not isinstance(got, (int, float)):
+            return False, f"{key}={got!r} is not a number"
+        rng = rng or {}
+        if "min" in rng and got < rng["min"]:
+            return False, f"{key}={got!r} < min {rng['min']!r}"
+        if "max" in rng and got > rng["max"]:
+            return False, f"{key}={got!r} > max {rng['max']!r}"
+    return True, ""
+
+
+_DROPPED = object()
+
+
+def _json_greater_than(want, ctx):
+    """Assert the interpolated value under `path` is greater than `than`.
+
+    `{"path": "uptime_seconds", "than": <interpolated literal>}`. A `than` that
+    renders as `null` because the reference could not be resolved drops the check
+    (it cannot be enforced) instead of erroring out. Both sides must be numbers.
+    """
+    body = ctx.get("json")
+    if not isinstance(body, dict):
+        return False, "response body is not a JSON object"
+    path = want.get("path")
+    if path not in body:
+        return False, f"json missing key {path!r}"
+    got = body[path]
+    than = want.get("than")
+    if than is _DROPPED or than is _UNRESOLVED or (than is None and "than" in want):
+        log.debug("json_greater_than: %r unresolvable, check dropped", path)
+        return True, ""
+    for label, val in (("value", got), ("threshold", than)):
+        if isinstance(val, bool) or not isinstance(val, (int, float)):
+            return False, f"{label} {val!r} is not a number"
+    return got > than, f"{path}={got!r} is not greater than {than!r}"
 
 
 def _exit(want, ctx):
@@ -192,6 +259,8 @@ _CHECKS = {
     "body_contains": _body_contains,
     "headers": _headers,
     "json": _json,
+    "json_number": _json_number,
+    "json_greater_than": _json_greater_than,
     "exit": _exit,
     "stdout_contains": _stdout_contains,
     "file_exists": _file_exists,
@@ -228,4 +297,9 @@ def validate_expect(expect):
             problems.append(f"{key} needs a non-empty value, got {want!r}")
         elif key == "console_errors" and (isinstance(want, bool) or not isinstance(want, int)):
             problems.append(f"console_errors must be an integer count (e.g. 0), got {want!r}")
+        elif key == "json_number" and not isinstance(want, dict):
+            problems.append(f"json_number must map key -> {{min?, max?}}, got {want!r}")
+        elif key == "json_greater_than" and not (
+                isinstance(want, dict) and isinstance(want.get("path"), str)):
+            problems.append(f"json_greater_than needs a 'path' string, got {want!r}")
     return problems

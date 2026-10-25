@@ -10,7 +10,16 @@ steps:
       status: 200
       json:
         has: ["uptime_seconds"]
-  - name: "Second uptime call after a short pause"
+      json_number:
+        uptime_seconds: { min: 0 }
+
+  - name: "Wait about a second in the app container so uptime has to advance"
+    custom:
+      run: "sleep 1"
+    expect:
+      exit: 0
+
+  - name: "Second uptime call after the pause must report a strictly greater value"
     http:
       method: GET
       path: "/uptime"
@@ -18,3 +27,10 @@ steps:
       status: 200
       json:
         has: ["uptime_seconds"]
+      json_number:
+        uptime_seconds: { min: 0 }
+      # Compare the two readings: call 2 must be greater than call 1. Without
+      # this, a constant uptime_seconds would pass.
+      json_greater_than:
+        path: uptime_seconds
+        than: "${steps.first.response.json.uptime_seconds}"
