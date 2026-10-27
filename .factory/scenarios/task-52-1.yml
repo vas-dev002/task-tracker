@@ -1,10 +1,11 @@
 version: 1
 scenario: "GET /weekday returns 200 with JSON whose weekday is a full English day name matching today's UTC day"
-# The weekday value is asserted inside the app container via a `custom` step: the
-# runner only resolves ${steps.<id>...} tokens and has no ${now...} clock, and
-# `matches` is not in its check vocabulary. The script below therefore compares
-# the served value against the container's own UTC clock, which is the same clock
-# the app uses.
+# The weekday VALUE is asserted in the `custom` step: the runner only resolves
+# ${steps.<id>...} tokens (no ${now...} clock), and its check vocabulary has no
+# regex/`matches`. The script below compares the served value against the
+# container's own UTC clock — the same clock the app reads.
+# NOTE: the app image (python:3.12-slim per .factory/runtime.yml) has `urllib`
+# pruned, so this uses stdlib `http.client` for the request.
 steps:
   - id: first
     name: "Fetch /weekday and validate status and payload shape"
@@ -14,30 +15,37 @@ steps:
       json:
         has: ["weekday"]
 
-  - name: "Assert the weekday is a full English day name equal to today's UTC day (tolerating a midnight rollover)"
+  - name: "Assert the weekday is a full English day name equal to today's UTC day"
     custom:
       run: >-
         python -c "
-        import json, urllib.request, datetime;
-        w = json.load(urllib.request.urlopen('http://localhost:8000/weekday'))['weekday'];
+        import datetime, http.client, json;
         names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-        assert w in names, 'not a full English day name: %r' % (w,);
-        now = datetime.datetime.now(datetime.timezone.utc);
-        i = names.index(w);
-        ok = {names[(now.weekday() + d) % 7] for d in (-1, 0, 1)};
-        assert w in ok, 'weekday %r is not today\'s UTC day (%s); got allowed %s' % (w, now.strftime('%A'), sorted(ok));
-        print('weekday ok:', w)
+        before = datetime.datetime.now(datetime.timezone.utc).weekday();
+        conn = http.client.HTTPConnection('localhost', 8000, timeout=10);
+        conn.request('GET', '/weekday');
+        resp = conn.getresponse();
+        raw = resp.read();
+        assert resp.status == 200, 'status %r' % (resp.status,);
+        w = json.loads(raw.decode())['weekday'];
+        after = datetime.datetime.now(datetime.timezone.utc).weekday();
+        assert isinstance(w, str) and w in names, 'not a full English day name: %r' % (w,);
+        allowed = {names[before], names[after]};
+        assert w in allowed, 'weekday %r is not today\'s UTC day; allowed %s' % (w, sorted(allowed));
+        print('weekday ok:', w, 'utc:', datetime.datetime.now(datetime.timezone.utc).strftime('%A'))
         "
     expect:
       exit: 0
       stdout_contains: "weekday ok:"
 
   - id: second
-    name: "Fetch /weekday a second time and confirm the same weekday is reported"
+    name: "Confirm consecutive calls report the same weekday (no flicker across refreshes)"
     http: { method: GET, path: "/weekday" }
     expect:
       status: 200
-      # Proves the UTC day is stable across consecutive calls (no flickering value).
+      # Compares the two responses to each other: proves the UTC day is stable
+      # across consecutive calls (a midnight rollover would need to move the day
+      # twice in one run).
       json:
         equals:
           weekday: "${steps.first.response.json.weekday}"
