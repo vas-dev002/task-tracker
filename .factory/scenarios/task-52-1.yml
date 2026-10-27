@@ -8,9 +8,16 @@ steps:
       body_contains: "weekday"
       json:
         has: ["weekday"]
-  - name: "Fetch /weekday again and confirm the weekday name is one of Monday..Sunday"
+  - name: "Fetch /weekday again and confirm the weekday equals today's UTC day name (Monday..Sunday)"
     http: { method: GET, path: "/weekday" }
     expect:
       status: 200
       json:
         has: ["weekday"]
+        equals:
+          # The value must be today's UTC day of the week as a full English name.
+          weekday: "${now.utc:%A}"
+        # Tolerate a UTC midnight rollover between the app's clock and the gate's
+        # clock; a constant, empty or localized value still fails both checks.
+        matches:
+          weekday: "^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$"
