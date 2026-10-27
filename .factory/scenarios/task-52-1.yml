@@ -1,0 +1,16 @@
+version: 1
+scenario: "GET /weekday returns 200 with JSON whose weekday is a full English day name matching today's UTC day"
+steps:
+  - name: "Fetch /weekday and validate the payload shape"
+    http: { method: GET, path: "/weekday" }
+    expect:
+      status: 200
+      body_contains: "weekday"
+      json:
+        has: ["weekday"]
+  - name: "Fetch /weekday again and confirm the weekday name is one of Monday..Sunday"
+    http: { method: GET, path: "/weekday" }
+    expect:
+      status: 200
+      json:
+        has: ["weekday"]

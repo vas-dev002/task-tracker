@@ -41,6 +41,9 @@ class SmokeHandler(BaseHTTPRequestHandler):
         elif self.path == "/date":
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             self._send_json(200, {"date": today})
+        elif self.path == "/weekday":
+            weekday = datetime.now(timezone.utc).strftime("%A")
+            self._send_json(200, {"weekday": weekday})
         elif self.path == "/uptime":
             uptime = max(0.0, time.monotonic() - START_TIME)
             self._send_json(200, {"uptime_seconds": round(uptime, 3)})
