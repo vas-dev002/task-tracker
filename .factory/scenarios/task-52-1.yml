@@ -1,23 +1,43 @@
 version: 1
 scenario: "GET /weekday returns 200 with JSON whose weekday is a full English day name matching today's UTC day"
+# The weekday value is asserted inside the app container via a `custom` step: the
+# runner only resolves ${steps.<id>...} tokens and has no ${now...} clock, and
+# `matches` is not in its check vocabulary. The script below therefore compares
+# the served value against the container's own UTC clock, which is the same clock
+# the app uses.
 steps:
-  - name: "Fetch /weekday and validate the payload shape"
-    http: { method: GET, path: "/weekday" }
-    expect:
-      status: 200
-      body_contains: "weekday"
-      json:
-        has: ["weekday"]
-  - name: "Fetch /weekday again and confirm the weekday equals today's UTC day name (Monday..Sunday)"
+  - id: first
+    name: "Fetch /weekday and validate status and payload shape"
     http: { method: GET, path: "/weekday" }
     expect:
       status: 200
       json:
         has: ["weekday"]
+
+  - name: "Assert the weekday is a full English day name equal to today's UTC day (tolerating a midnight rollover)"
+    custom:
+      run: >-
+        python -c "
+        import json, urllib.request, datetime;
+        w = json.load(urllib.request.urlopen('http://localhost:8000/weekday'))['weekday'];
+        names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+        assert w in names, 'not a full English day name: %r' % (w,);
+        now = datetime.datetime.now(datetime.timezone.utc);
+        i = names.index(w);
+        ok = {names[(now.weekday() + d) % 7] for d in (-1, 0, 1)};
+        assert w in ok, 'weekday %r is not today\'s UTC day (%s); got allowed %s' % (w, now.strftime('%A'), sorted(ok));
+        print('weekday ok:', w)
+        "
+    expect:
+      exit: 0
+      stdout_contains: "weekday ok:"
+
+  - id: second
+    name: "Fetch /weekday a second time and confirm the same weekday is reported"
+    http: { method: GET, path: "/weekday" }
+    expect:
+      status: 200
+      # Proves the UTC day is stable across consecutive calls (no flickering value).
+      json:
         equals:
-          # The value must be today's UTC day of the week as a full English name.
-          weekday: "${now.utc:%A}"
-        # Tolerate a UTC midnight rollover between the app's clock and the gate's
-        # clock; a constant, empty or localized value still fails both checks.
-        matches:
-          weekday: "^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$"
+          weekday: "${steps.first.response.json.weekday}"

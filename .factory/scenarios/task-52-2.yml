@@ -5,8 +5,13 @@ steps:
     http: { method: GET, path: "/health" }
     expect:
       status: 200
+      json:
+        has: ["status"]
+        equals:
+          status: "ok"
   - name: "Weekday endpoint is served on the same app"
     http: { method: GET, path: "/weekday" }
     expect:
       status: 200
-      body_contains: "weekday"
+      json:
+        has: ["weekday"]
